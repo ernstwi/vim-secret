@@ -1,0 +1,251 @@
+Execute (setup test environment):
+  set hidden
+
+Execute (helper functions):
+  function! AssertSyntax(...)
+    for i in range(1, a:0)
+      let line = split(get(a:000, i-1), '\zs')
+      for j in range(1, len(line))
+        if get(line, j-1) == '•'
+          AssertEqual vader#helper#syntax_at(i, j), 'SecretHidden', 'Expected SecretHidden, got ' . vader#helper#syntax_at(i, j) . ' at line ' . i . ', column ' . j
+        elseif get(line, j-1) == ' '
+          AssertEqual vader#helper#syntax_at(i, j), '', 'Expected None, got ' . vader#helper#syntax_at(i, j) . ' at line ' . i . ', column ' . j
+        elseif get(line, j-1) == '-'
+          AssertEqual vader#helper#syntax_at(i, j), 'SecretVisible', 'Expected SecretVisible, got ' . vader#helper#syntax_at(i, j) . ' at line ' . i . ', column ' . j
+        endif
+      endfor
+    endfor
+  endfunction
+  command! -nargs=* AssertSyntax call AssertSyntax(<args>)
+
+Before:
+  source plugin/secret.vim
+  source autoload/secret.vim
+
+After:
+  Secret!
+  unlet! g:secret_cchar
+  unlet! g:secret_visibility
+  unlet! g:secret_visibility_normal
+  unlet! g:secret_visibility_insert
+  unlet! g:secret_timeout_normal
+  unlet! g:secret_timeout_insert
+
+Given:
+  Lorem ipsum
+  dolor sit amet
+
+Execute (enable/disable):
+  AssertSyntax '           ', '              '
+  Secret
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+  Assert exists('w:secret_state')
+  Assert exists('#secret-' . win_getid() . '-' . bufnr())
+  Secret!
+  AssertSyntax '           ', '              '
+  Assert !exists('w:secret_state')
+  Assert !exists('#secret-' . win_getid() . '-' . bufnr())
+
+Execute (word visibility):
+  Secret
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+  normal jw
+  AssertSyntax '••••• •••••', '••••• --- ••••'
+
+Execute (line visibility):
+  let g:secret_visibility = 'line'
+  Secret
+  AssertSyntax '-----------', '••••• ••• ••••'
+  normal j
+  AssertSyntax '••••• •••••', '--------------'
+
+Execute (char visibility):
+  let g:secret_visibility = 'char'
+  Secret
+  AssertSyntax '-•••• •••••', '••••• ••• ••••'
+  normal wll
+  AssertSyntax '••••• ••-••', '••••• ••• ••••'
+
+Execute (none visibility):
+  let g:secret_visibility = 'none'
+  Secret
+  AssertSyntax '••••• •••••', '••••• ••• ••••'
+  normal jww
+  AssertSyntax '••••• •••••', '••••• ••• ••••'
+
+Execute (line, insert):
+  let g:secret_visibility_insert = 'line'
+  Secret
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+  doautocmd InsertEnter
+  AssertSyntax '-----------', '••••• ••• ••••'
+  doautocmd InsertLeave
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+
+Execute (word, insert):
+  let g:secret_visibility_insert = 'word'
+  Secret
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+  doautocmd InsertEnter
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+  doautocmd InsertLeave
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+
+Execute (char, insert):
+  let g:secret_visibility_insert = 'char'
+  Secret
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+  normal l
+  doautocmd InsertEnter
+  AssertSyntax '-•••• •••••', '••••• ••• ••••'
+  doautocmd InsertLeave
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+
+Execute (none, insert):
+  let g:secret_visibility_insert = 'none'
+  Secret
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+  doautocmd InsertEnter
+  AssertSyntax '••••• •••••', '••••• ••• ••••'
+  doautocmd InsertLeave
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+
+Execute (timeout, normal):
+  Secret
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+  doautocmd CursorHold
+  AssertSyntax '••••• •••••', '••••• ••• ••••'
+  Secret!
+  let g:secret_timeout_normal = 0
+  Secret
+  doautocmd CursorHold
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+
+Execute (timeout, insert):
+  " Not testable?
+
+Execute (splits 1):
+  vsp
+  Secret
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+  let w = win_getid()
+  let b = bufnr()
+  wincmd l
+  Assert !exists('w:secret_state')
+  Assert exists('#secret-' . w . '-' . b)
+  AssertSyntax '           ', '              '
+  wincmd h " Switch back to secret buffer so it is undone
+
+Execute (splits 2):
+  Secret
+  vsp
+  Assert !exists('w:secret_state')
+  AssertSyntax '           ', '              '
+  wincmd l
+  doautocmd CursorMoved
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+
+Execute (leave window):
+  Secret
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+  doautocmd WinLeave
+  AssertSyntax '••••• •••••', '••••• ••• ••••'
+
+Execute (close buffer):
+  enew
+  let b = bufnr()
+  0put ='Lorem ipsum'
+  Secret
+  AssertSyntax '----- •••••'
+  bdelete!
+  Assert !exists('w:secret_state')
+  Assert !exists('#secret-' . win_getid() . '-' . b)
+
+Execute (switching buffers in one window):
+  let a = bufnr()
+  Secret
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+
+  enew
+  let b = bufnr()
+  Secret
+  0put ='Lorem ipsum'
+  AssertSyntax '----- •••••'
+
+  enew
+  let c = bufnr()
+  0put ='Lorem ibsum'
+  Secret
+  normal w
+  AssertSyntax '••••• -----'
+
+  Assert exists('#secret-' . win_getid() . '-' . a)
+  Assert exists('#secret-' . win_getid() . '-' . b)
+  Assert exists('#secret-' . win_getid() . '-' . c)
+  Assert has_key(w:secret_state, a)
+  Assert has_key(w:secret_state, b)
+  Assert has_key(w:secret_state, c)
+
+  execute 'b' a
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+  execute 'b' b
+  AssertSyntax '----- •••••'
+  execute 'b' c
+  AssertSyntax '----- •••••'
+
+  execute 'b' a
+  execute 'bdelete!' c
+
+  Assert exists('#secret-' . win_getid() . '-' . a)
+  Assert exists('#secret-' . win_getid() . '-' . b)
+  Assert !exists('#secret-' . win_getid() . '-' . c)
+  Assert has_key(w:secret_state, a)
+  Assert has_key(w:secret_state, b)
+  Assert !has_key(w:secret_state, c)
+
+  execute 'bdelete!' b
+
+  Assert exists('#secret-' . win_getid() . '-' . a)
+  Assert !exists('#secret-' . win_getid() . '-' . b)
+  Assert !exists('#secret-' . win_getid() . '-' . c)
+  Assert has_key(w:secret_state, a)
+  Assert !has_key(w:secret_state, b)
+  Assert !has_key(w:secret_state, c)
+
+  b #
+  execute 'bdelete!' a
+  Assert !exists('#secret-' . win_getid() . '-' . a)
+  Assert !exists('#secret-' . win_getid() . '-' . b)
+  Assert !exists('#secret-' . win_getid() . '-' . c)
+  Assert !exists('w:secret_state')
+
+Execute (quickhide mapping):
+  let g:secret_quickhide = '<C-e>'
+  Secret
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+  normal 
+  AssertSyntax '••••• •••••', '••••• ••• ••••'
+  normal w
+  doautocmd CursorMoved
+  AssertSyntax '••••• -----', '••••• ••• ••••'
+
+Execute (quickhide mapping, moving around):
+  let g:secret_quickhide = 'q'
+  vsp
+  Secret
+  normal q
+  AssertSyntax '••••• •••••', '••••• ••• ••••'
+  enew
+  0put ='Lorem ipsum'
+  AssertEqual maparg('q'), ''
+  b #
+  AssertEqual maparg('q'), ':syntax clear SecretVisible<CR>'
+  wincmd l
+  AssertEqual maparg('q'), ''
+  wincmd h
+  doautocmd CursorMoved
+  AssertSyntax '----- •••••', '••••• ••• ••••'
+  normal q
+  AssertSyntax '••••• •••••', '••••• ••• ••••'
+  Secret!
+  AssertEqual maparg('q'), ''

@@ -249,3 +249,9 @@ Execute (quickhide mapping, moving around):
   AssertSyntax '••••• •••••', '••••• ••• ••••'
   Secret!
   AssertEqual maparg('q'), ''
+
+Execute (toggle mapping):
+  nmap s <Plug>SecretToggle
+  AssertSyntax '           ', '              '
+  normal s
+  AssertSyntax '----- •••••', '••••• ••• ••••'

@@ -1,4 +1,5 @@
 command! -bang -nargs=* Secret call secret#secret(<bang>1, <f-args>)
+nmap <silent> <Plug>SecretToggle :call secret#toggle()<CR>
 
 if !exists('g:secret_cchar')
     let g:secret_cchar = '•'

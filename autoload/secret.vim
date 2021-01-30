@@ -164,3 +164,11 @@ function! secret#secret(enable, ...)
         call s:disable()
     endif
 endfunction
+
+function! secret#toggle()
+    if !exists('w:secret_state') || !has_key(w:secret_state, bufnr())
+        call secret#secret(1)
+    else
+        call secret#secret(0)
+    endif
+endfunction

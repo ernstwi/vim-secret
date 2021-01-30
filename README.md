@@ -17,6 +17,10 @@
         <td><code>:Secret!</code></td>
         <td>Disable secret view.</td>
     </tr>
+    <tr>
+        <td><code>&lt;Plug&gt;SecretToggle</code></td>
+        <td>Toggle secret view.</td>
+    </tr>
 </table>
 
 An area around the cursor is unhidden to enable you to see what you are typing. This can be the entire line, the current word, the current character, or it can be disabled completely.

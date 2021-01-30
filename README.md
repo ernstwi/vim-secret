@@ -38,3 +38,9 @@ autocmd! VimEnter,ColorScheme * hi Conceal ctermbg=NONE guibg=NONE
 ```
 
 See [`:help secret-highlight`](./doc/secret.txt#L74) for more info.
+
+## Testing
+
+`make` can be used to do testing in an isolated environment. The default rule runs `test/*.vader` in Vim and Neovim.
+
+Thanks to [vim-sneak](https://github.com/justinmk/vim-sneak) for this idea.

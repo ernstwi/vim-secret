@@ -41,6 +41,9 @@ See [`:help secret-highlight`](./doc/secret.txt#L74) for more info.
 
 ## Testing
 
-`make` can be used to do testing in an isolated environment. The default target runs `test/*.vader` in Vim and Neovim.
+Docker can be used to run tests in an isolated environment:
 
-Thanks to [vim-sneak](https://github.com/justinmk/vim-sneak) for this idea.
+```
+$ docker build -t vim-secret .
+$ docker run --rm vim-secret [--verbose]
+```
